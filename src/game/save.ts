@@ -1,0 +1,90 @@
+import * as C from './config';
+import type { GameState } from './types';
+
+export interface SlotInfo {
+  slot: number;
+  state: GameState | null;
+  savedAt: number | null;
+}
+
+interface SaveFile {
+  game: 'poker-tycoon';
+  version: number;
+  savedAt: number;
+  state: GameState;
+}
+
+/** Interfaz mínima de almacenamiento (localStorage en el navegador, un Map en los tests) */
+export interface KV {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+export function serialize(state: GameState, savedAt = Date.now()): string {
+  const file: SaveFile = { game: 'poker-tycoon', version: C.SAVE_VERSION, savedAt, state };
+  return JSON.stringify(file);
+}
+
+/** Lee y valida una partida. Lanza un error con un mensaje en español si no es válida. */
+export function deserialize(json: string): { state: GameState; savedAt: number } {
+  let data: unknown;
+  try {
+    data = JSON.parse(json);
+  } catch {
+    throw new Error('El archivo no es un JSON válido.');
+  }
+  const f = data as Partial<SaveFile>;
+  if (!f || f.game !== 'poker-tycoon' || !f.state) {
+    throw new Error('El archivo no es una partida de Poker Tycoon.');
+  }
+  if (typeof f.version !== 'number' || f.version > C.SAVE_VERSION) {
+    throw new Error('La partida es de una versión más nueva del juego.');
+  }
+  const st = migrate(f.state as GameState, f.version);
+  if (!isValidState(st)) throw new Error('La partida está dañada.');
+  return { state: st, savedAt: f.savedAt ?? Date.now() };
+}
+
+function migrate(state: GameState, _from: number): GameState {
+  // Aquí se añadirán las migraciones entre versiones del guardado.
+  return { ...state, version: C.SAVE_VERSION };
+}
+
+function isValidState(s: GameState): boolean {
+  return (
+    typeof s.week === 'number' &&
+    typeof s.bankroll === 'number' &&
+    Number.isFinite(s.bankroll) &&
+    typeof s.rng === 'number' &&
+    !!s.skills &&
+    ['preflop', 'postflop', 'lectura', 'mental'].every((k) => typeof (s.skills as never)[k] === 'number') &&
+    Array.isArray(s.sessions) &&
+    !!s.career
+  );
+}
+
+const key = (slot: number) => `${C.SAVE_KEY_PREFIX}${slot}`;
+
+export function saveToSlot(kv: KV, slot: number, state: GameState): void {
+  kv.setItem(key(slot), serialize(state));
+}
+
+export function loadSlot(kv: KV, slot: number): SlotInfo {
+  const raw = kv.getItem(key(slot));
+  if (!raw) return { slot, state: null, savedAt: null };
+  try {
+    const { state, savedAt } = deserialize(raw);
+    return { slot, state, savedAt };
+  } catch {
+    return { slot, state: null, savedAt: null };
+  }
+}
+
+export function listSlots(kv: KV): SlotInfo[] {
+  return Array.from({ length: C.SAVE_SLOTS }, (_, i) => loadSlot(kv, i));
+}
+
+export function deleteSlot(kv: KV, slot: number): void {
+  kv.removeItem(key(slot));
+}
