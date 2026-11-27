@@ -117,7 +117,7 @@ export default function ShopModal() {
           {C.HOMES.map((h) => {
             const here = h.id === game.home;
             const err = canMove(game, h.id);
-            const hExp = monthlyExpenses({ home: h.id, setup: game.setup }).total;
+            const hExp = monthlyExpenses({ home: h.id, setup: game.setup, school: game.school }).total;
             const rec = moveRecommendation(game, h.id, buyinEur(lastLimit));
             const better = homeIndex(h.id) > homeIndex(game.home);
             return (
@@ -186,6 +186,12 @@ export default function ShopModal() {
                 <td>Suscripciones de software</td>
                 <td>{eur(exp.subscriptions)}</td>
               </tr>
+              {exp.school > 0 && (
+                <tr>
+                  <td>Escuela (sueldos y plataforma)</td>
+                  <td>{eur(exp.school)}</td>
+                </tr>
+              )}
               <tr className="total-row">
                 <td>Total al mes</td>
                 <td className="neg">{eur(exp.total)}</td>

@@ -1,5 +1,8 @@
 import * as C from './config';
+import { applyCoachWeek, coachMissing, coachUnlocked } from './coaching';
 import { Rng } from './rng';
+import { applySchoolWeek } from './school';
+import { applyIdleStreamWeek, applyStreamWeek, computeFame, streamMissing } from './streaming';
 import {
   getHome,
   isMonthEnd,
@@ -20,7 +23,10 @@ import {
 import { applySkillDelta, clampSkill, playXp, SKILL_IDS, studyGain } from './skills';
 import { clamp } from './state';
 import type {
+  CoachOutcome,
   ExpensesBreakdown,
+  SchoolOutcome,
+  StreamOutcome,
   GameState,
   LimitStats,
   PlayOutcome,
@@ -59,7 +65,18 @@ export function maxHoursThisWeek(state: GameState, kind: 'play' | 'study'): numb
 
 /** Comprueba si una acción es válida en el estado actual. Devuelve el motivo si no lo es. */
 export function validateAction(state: GameState, action: WeekAction): string | null {
-  if (action.type === 'play') {
+  if (action.type === 'stream') {
+    const missing = streamMissing(state);
+    if (missing.length) return `Para emitir te falta: ${missing.join(', ')}`;
+  }
+  if (action.type === 'coach') {
+    if (!coachUnlocked(state)) return `Para dar clases te falta: ${coachMissing(state).join(', ')}`;
+    const max = maxHoursThisWeek(state, 'study');
+    if (action.hours < Math.min(C.MIN_COACH_HOURS, max) || action.hours > Math.min(C.MAX_COACH_HOURS, max)) {
+      return isExhausted(state) ? `Estás agotado: como mucho ${C.EXHAUSTED_MAX_HOURS} h esta semana` : 'Horas no válidas';
+    }
+  }
+  if (action.type === 'play' || action.type === 'stream') {
     const fx = setupEffects(state.setup);
     if (action.tables < C.MIN_TABLES || action.tables > fx.maxTables) {
       return `Tu ordenador solo aguanta ${fx.maxTables} mesas`;
@@ -106,13 +123,17 @@ export function runWeek(state: GameState, action: WeekAction): WeekResult {
     downswing: { ...state.downswing },
   };
   let play: PlayOutcome | undefined;
+  let stream: StreamOutcome | undefined;
+  let coach: CoachOutcome | undefined;
   const skillDelta: Partial<Skills> = {};
   let moralChange = 0;
 
-  if (action.type === 'play') {
+  if (action.type === 'play' || action.type === 'stream') {
+    const live = action.type === 'stream';
     const lim = getLimit(action.limit);
     const hands = handsFor(action.tables, action.hours, fx.handsMult);
-    const energyCost = playEnergyCost(action.tables, action.hours, fx.energyCostMult);
+    const energyCost =
+      playEnergyCost(action.tables, action.hours, fx.energyCostMult) * (live ? C.STREAM_ENERGY_MULT : 1);
 
     const bis = buyinsFor(s.bankroll, action.limit);
     if (bis < C.RECOMMENDED_BUYINS) {
@@ -126,7 +147,7 @@ export function runWeek(state: GameState, action: WeekAction): WeekResult {
       skills: s.skills,
       tables: action.tables,
       comfortTables: fx.comfortTables,
-      skillBonus: fx.skillBonus,
+      skillBonus: fx.skillBonus - (live ? C.STREAM_SKILL_PENALTY : 0),
       energy: s.energy,
       energyPerHand: hands > 0 ? energyCost / hands : 0,
       tilt: s.tilt,
@@ -177,6 +198,7 @@ export function runWeek(state: GameState, action: WeekAction): WeekResult {
     c.rakebackEur += rakebackEur;
     c.maxLimitIndex = Math.max(c.maxLimitIndex, limitIndex(action.limit));
     c.weeksPlayed += 1;
+    if (live) c.weeksStreamed += 1;
     c.maxDownswingBI = Math.max(c.maxDownswingBI, sim.maxDownswingBI);
     c.badBeats += sim.events.filter((e) => e.kind === 'badbeat' || e.kind === 'cooler').length;
     s.downswing = sim.downswing;
@@ -196,6 +218,7 @@ export function runWeek(state: GameState, action: WeekAction): WeekResult {
         rakeEur: round2(rakeEur),
         rakebackEur: round2(rakebackEur),
         curve: sim.curve,
+        ...(live ? { streamed: true } : {}),
       },
     ];
 
@@ -225,6 +248,21 @@ export function runWeek(state: GameState, action: WeekAction): WeekResult {
       stopReason: sim.stopReason,
       events: sim.events,
     };
+    if (live) {
+      stream = applyStreamWeek(s, rng, action.hours, play, hands);
+      if (stream.viral) messages.push(`🔥 ${stream.viral} (+${stream.viralFollowers} seguidores)`);
+    }
+  } else if (action.type === 'coach') {
+    const r = applyCoachWeek(s, action.hours);
+    coach = r.outcome;
+    Object.assign(skillDelta, r.xp);
+    s.energy = clamp(s.energy - C.COACH_ENERGY_PER_HOUR * action.hours + recovery, 0, 100);
+    s.tilt = clamp(s.tilt - tiltDecay(s), 0, 100);
+    s.rakeHistory = pushRake(s.rakeHistory, 0);
+    s.career.weeksCoached += 1;
+    if (coach.hoursSold < action.hours) {
+      messages.push(`Solo había alumnos para ${coach.hoursSold} h de clase esta semana.`);
+    }
   } else if (action.type === 'study') {
     skillDelta[action.topic] = studyGainFor(s, action.topic, action.hours);
     s.energy = clamp(s.energy - C.STUDY_ENERGY_PER_HOUR * action.hours + recovery, 0, 100);
@@ -242,6 +280,11 @@ export function runWeek(state: GameState, action: WeekAction): WeekResult {
 
   s.skills = applySkillDelta(s.skills, skillDelta);
 
+  // Seguidores y subs si esta semana no has emitido; ingresos pasivos de la escuela
+  if (action.type !== 'stream') stream = applyIdleStreamWeek(s);
+  const monthEnd = isMonthEnd(state.week);
+  const school: SchoolOutcome | undefined = applySchoolWeek(s, rng, monthEnd);
+
   // Moral: resultado de la semana y tendencia hacia la moral base de tu vivienda
   const base = getHome(s.home).moral;
   let moral = clamp(s.moral + moralChange, 0, 100);
@@ -250,7 +293,7 @@ export function runWeek(state: GameState, action: WeekAction): WeekResult {
 
   // Gastos fijos al cerrar el mes
   let expenses: ExpensesBreakdown | undefined;
-  if (isMonthEnd(state.week)) {
+  if (monthEnd) {
     expenses = monthlyExpenses(s);
     s.bankroll -= expenses.total;
     s.career.expensesEur += expenses.total;
@@ -274,6 +317,8 @@ export function runWeek(state: GameState, action: WeekAction): WeekResult {
       home: 'habitacion',
       rakeHistory: [],
       downswing: { cumBI: 0, peakBI: 0, announced: 0 },
+      // Sin dinero para pagar sueldos, los coaches de la escuela se marchan
+      school: { ...s.school, coaches: [] },
       career: { ...s.career, busts: s.career.busts + 1 },
     };
     messages.push(
@@ -287,6 +332,7 @@ export function runWeek(state: GameState, action: WeekAction): WeekResult {
     }
   }
 
+  s.fame = computeFame(s);
   s.week += 1;
   s.rng = rng.state;
 
@@ -300,6 +346,10 @@ export function runWeek(state: GameState, action: WeekAction): WeekResult {
     tiltDelta: s.tilt - state.tilt,
     bankrollDelta: s.bankroll - state.bankroll,
     moralDelta: s.moral - state.moral,
+    stream,
+    coach,
+    school,
+    fameDelta: s.fame - state.fame,
     expenses,
     busted,
     messages,

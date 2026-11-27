@@ -7,7 +7,19 @@ import { newGame } from './game/state';
 import type { GameState, WeekAction, WeekResult } from './game/types';
 import { runWeek, suggestLimit } from './game/week';
 
-export type ModalId = 'play' | 'study' | 'rest' | 'stats' | 'graph' | 'save' | 'shop' | null;
+export type ModalId =
+  | 'play'
+  | 'stream'
+  | 'study'
+  | 'rest'
+  | 'coach'
+  | 'stats'
+  | 'graph'
+  | 'save'
+  | 'shop'
+  | 'streaming'
+  | 'school'
+  | null;
 export type Speed = 1 | 2 | 4;
 
 export interface Toast {
@@ -47,6 +59,8 @@ interface Store {
   openModal(m: ModalId): void;
   doAction(a: WeekAction): void;
   buy(cat: UpgradeCategory): void;
+  /** Aplica un cambio instantáneo (compra, contratar…) y guarda. Muestra el error si falla. */
+  apply(fn: (g: GameState) => GameState, okMsg?: string): void;
   move(home: HomeId): void;
   tick(dtMs: number): void;
   setSpeed(s: Speed): void;
@@ -178,6 +192,18 @@ export const useStore = create<Store>((set, get) => ({
       set({ game: next });
       get().saveNow();
       get().toast(`Has comprado: ${item.name}.`, 'good');
+    } catch (e) {
+      get().toast((e as Error).message, 'bad');
+    }
+  },
+
+  apply(fn, okMsg) {
+    const { game, running } = get();
+    if (!game || running) return;
+    try {
+      set({ game: fn(game) });
+      get().saveNow();
+      if (okMsg) get().toast(okMsg, 'good');
     } catch (e) {
       get().toast((e as Error).message, 'bad');
     }

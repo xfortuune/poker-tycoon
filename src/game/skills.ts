@@ -23,10 +23,11 @@ export function studyGain(current: number, hours: number): number {
   return diminishing(current, C.STUDY_GAIN_PER_HOUR * hours);
 }
 
-/** Experiencia por manos jugadas: sube Postflop y Lectura */
+/** Experiencia por manos jugadas: sube Preflop, Postflop y Lectura */
 export function playXp(skills: Skills, hands: number): Partial<Skills> {
   const raw = (C.PLAY_XP_PER_10K_HANDS * hands) / 10000;
   return {
+    preflop: diminishing(skills.preflop, raw),
     postflop: diminishing(skills.postflop, raw),
     lectura: diminishing(skills.lectura, raw),
   };

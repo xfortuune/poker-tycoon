@@ -1,6 +1,6 @@
-import type { HomeId, LimitId, UpgradeCategory } from './config';
+import type { HomeId, LimitId, StreamGearId, UpgradeCategory } from './config';
 
-export type { HomeId, LimitId, UpgradeCategory };
+export type { HomeId, LimitId, StreamGearId, UpgradeCategory };
 
 export type SkillId = 'preflop' | 'postflop' | 'lectura' | 'mental';
 
@@ -36,6 +36,8 @@ export interface SessionRecord {
   rakebackEur: number;
   /** Muestras intermedias de la sesión (incluye el punto final) */
   curve: CurvePoint[];
+  /** Sesión jugada en directo */
+  streamed?: boolean;
 }
 
 export interface CareerStats {
@@ -61,6 +63,8 @@ export interface CareerStats {
   maxDownswingBI: number;
   badBeats: number;
   moves: number;
+  weeksStreamed: number;
+  weeksCoached: number;
 }
 
 /** Downswing de la carrera medido en buy-ins, para los eventos de tilt */
@@ -88,6 +92,8 @@ export interface ExpensesBreakdown {
   food: number;
   bills: number;
   subscriptions: number;
+  /** Sueldos de los coaches y plataforma de la escuela */
+  school: number;
   total: number;
 }
 
@@ -108,6 +114,9 @@ export interface GameState {
   home: HomeId;
   setup: Setup;
   downswing: DownswingState;
+  stream: StreamState;
+  coaching: CoachingState;
+  school: SchoolState;
   /** Rake pagado (€) en las últimas semanas, para el nivel VIP */
   rakeHistory: number[];
   limitStats: Partial<Record<LimitId, LimitStats>>;
@@ -118,7 +127,9 @@ export interface GameState {
 
 export type WeekAction =
   | { type: 'play'; limit: LimitId; tables: number; hours: number }
+  | { type: 'stream'; limit: LimitId; tables: number; hours: number }
   | { type: 'study'; topic: SkillId; hours: number }
+  | { type: 'coach'; hours: number }
   | { type: 'rest' };
 
 export interface PlayOutcome {
@@ -157,8 +168,98 @@ export interface WeekResult {
   tiltDelta: number;
   bankrollDelta: number;
   moralDelta: number;
+  stream?: StreamOutcome;
+  coach?: CoachOutcome;
+  school?: SchoolOutcome;
+  /** Fama antes y después */
+  fameDelta: number;
   /** Gastos del mes, si esta semana tocaba pagarlos */
   expenses?: ExpensesBreakdown;
   busted: boolean;
   messages: string[];
+}
+
+export type StreamGear = Record<StreamGearId, number>;
+
+export interface StreamState {
+  gear: StreamGear;
+  subs: number;
+  hours: number;
+  incomeEur: number;
+  virals: number;
+  maxFollowers: number;
+  /** Media de espectadores del último directo */
+  lastViewers: number;
+  weeksSinceStream: number;
+}
+
+export interface CoachingState {
+  reputation: number;
+  hours: number;
+  incomeEur: number;
+  /** Alumnos de la última semana de clases */
+  students: number;
+}
+
+export interface Coach {
+  id: number;
+  name: string;
+  /** Nivel del coach (40–90) */
+  skill: number;
+  specialty: SkillId;
+  /** Sueldo mensual (€) */
+  salary: number;
+}
+
+export interface Course {
+  id: number;
+  topic: SkillId;
+  title: string;
+  quality: number;
+  price: number;
+  createdWeek: number;
+  sales: number;
+  incomeEur: number;
+}
+
+export interface SchoolState {
+  open: boolean;
+  members: number;
+  coaches: Coach[];
+  /** Coaches disponibles para contratar (se renuevan cada mes) */
+  candidates: Coach[];
+  courses: Course[];
+  incomeEur: number;
+  nextId: number;
+}
+
+export interface StreamOutcome {
+  viewers: number;
+  newFollowers: number;
+  churned: number;
+  viral?: string;
+  viralFollowers: number;
+  subs: number;
+  subsEur: number;
+  donationsEur: number;
+  sponsorEur: number;
+  totalEur: number;
+}
+
+export interface CoachOutcome {
+  hoursOffered: number;
+  hoursSold: number;
+  rate: number;
+  incomeEur: number;
+  students: number;
+  reputationDelta: number;
+}
+
+export interface SchoolOutcome {
+  members: number;
+  membersDelta: number;
+  membershipEur: number;
+  courseSales: number;
+  courseEur: number;
+  totalEur: number;
 }

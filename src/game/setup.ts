@@ -1,6 +1,7 @@
 import * as C from './config';
 import type { HomeConfig, HomeId, UpgradeCategory, UpgradeItem } from './config';
-import type { ExpensesBreakdown, GameState, Setup } from './types';
+import { monthlySchoolCosts } from './school';
+import type { ExpensesBreakdown, GameState, SchoolState, Setup } from './types';
 
 export const EMPTY_SETUP: Setup = { silla: 0, monitores: 0, pc: 0, software: 0 };
 
@@ -57,15 +58,17 @@ export function setupEffects(setup: Setup): SetupEffects {
   return e;
 }
 
-export function monthlyExpenses(state: Pick<GameState, 'home' | 'setup'>): ExpensesBreakdown {
+export function monthlyExpenses(state: Pick<GameState, 'home' | 'setup'> & { school?: SchoolState }): ExpensesBreakdown {
   const h = getHome(state.home);
   const subscriptions = C.UPGRADE_CATEGORIES.reduce((a, { id }) => a + currentItem(state.setup, id).monthly, 0);
+  const school = state.school ? monthlySchoolCosts(state.school) : 0;
   return {
     rent: h.rent,
     food: h.food,
     bills: h.bills,
     subscriptions,
-    total: h.rent + h.food + h.bills + subscriptions,
+    school,
+    total: h.rent + h.food + h.bills + subscriptions + school,
   };
 }
 
@@ -134,6 +137,6 @@ export function moveHome(state: GameState, id: HomeId): GameState {
 /** Recomendación para mudarse: mudanza + N meses de gastos + 30 buy-ins de tu límite */
 export function moveRecommendation(state: GameState, id: HomeId, buyin: number): number {
   const h = getHome(id);
-  const exp = monthlyExpenses({ home: id, setup: state.setup }).total;
+  const exp = monthlyExpenses({ home: id, setup: state.setup, school: state.school }).total;
   return h.moveCost + exp * C.MOVE_RECOMMENDED_MONTHS + buyin * C.RECOMMENDED_BUYINS;
 }

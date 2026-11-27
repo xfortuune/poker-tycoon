@@ -10,6 +10,7 @@ import {
   playEnergyCost,
   rateWinrate,
 } from '../game/simulation';
+import { expectedViewers } from '../game/streaming';
 import { isExhausted, maxHoursThisWeek } from '../game/week';
 import { useStore } from '../store';
 import { eur, num } from './format';
@@ -17,7 +18,8 @@ import Modal from './Modal';
 
 const RATING_LABEL = { favorable: 'Favorable', ajustado: 'Ajustado', desfavorable: 'Difícil' } as const;
 
-export default function PlayModal() {
+export default function PlayModal({ mode = 'play' }: { mode?: 'play' | 'stream' }) {
+  const live = mode === 'stream';
   const game = useStore((s) => s.game)!;
   const doAction = useStore((s) => s.doAction);
   const openModal = useStore((s) => s.openModal);
@@ -31,12 +33,20 @@ export default function PlayModal() {
   const [hours, setHours] = useState(Math.min(last?.hours ?? 20, maxHours));
 
   const hands = handsFor(tables, hours, fx.handsMult);
-  const cost = playEnergyCost(tables, hours, fx.energyCostMult);
+  const cost = playEnergyCost(tables, hours, fx.energyCostMult) * (live ? C.STREAM_ENERGY_MULT : 1);
+  const skillBonus = fx.skillBonus - (live ? C.STREAM_SKILL_PENALTY : 0);
   const bis = buyinsFor(game.bankroll, limit);
   const energyAfter = Math.max(0, game.energy - cost);
 
   return (
-    <Modal title="Jugar sesión" onClose={() => openModal(null)} wide>
+    <Modal title={live ? '🔴 Streamear' : 'Jugar sesión'} onClose={() => openModal(null)} wide>
+      {live && (
+        <p className="hint">
+          Juegas en directo: el chat te distrae (−{C.STREAM_SKILL_PENALTY} de habilidad) y cansa un{' '}
+          {Math.round((C.STREAM_ENERGY_MULT - 1) * 100)} % más, pero ganas seguidores, subs y donaciones. Los límites altos atraen más
+          público.
+        </p>
+      )}
       <p className="hint">
         Elige el límite. Se recomiendan al menos {C.RECOMMENDED_BUYINS} buy-ins (1 buy-in = 100 bb).
       </p>
@@ -51,7 +61,7 @@ export default function PlayModal() {
             energy: game.energy,
             tilt: game.tilt,
             comfortTables: fx.comfortTables,
-            skillBonus: fx.skillBonus,
+            skillBonus,
           }).netWR;
           const rating = rateWinrate(wr);
           return (
@@ -92,6 +102,11 @@ export default function PlayModal() {
         <div>
           Energía <strong>{Math.round(game.energy)} → {Math.round(energyAfter)}</strong>
         </div>
+        {live && (
+          <div>
+            Espectadores <strong>~{num(expectedViewers(game.followers, game.stream.gear, limit))}</strong>
+          </div>
+        )}
         <div>
           Bankroll en {limit} <strong className={bis < C.RECOMMENDED_BUYINS ? 'neg' : 'pos'}>{Math.floor(bis)} BI</strong>
         </div>
@@ -112,8 +127,8 @@ export default function PlayModal() {
         <button className="btn" onClick={() => openModal(null)}>
           Cancelar
         </button>
-        <button className="btn primary" onClick={() => doAction({ type: 'play', limit, tables, hours })}>
-          ¡A jugar!
+        <button className="btn primary" onClick={() => doAction({ type: mode, limit, tables, hours })}>
+          {live ? '¡En directo!' : '¡A jugar!'}
         </button>
       </div>
     </Modal>

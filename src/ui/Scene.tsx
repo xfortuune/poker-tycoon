@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { HomeId } from '../game/config';
-import type { Setup } from '../game/types';
+import type { Setup, StreamGear } from '../game/types';
 import { drawSprite, PLAYER, SPADE } from './sprites';
 
 export const SCENE_W = 192;
@@ -9,13 +9,15 @@ export const SCENE_H = 108;
 /** Posición de la cabeza del personaje, en % del escenario (para bocadillos) */
 export const HEAD_POS = { x: (104 / SCENE_W) * 100, y: (70 / SCENE_H) * 100 };
 
-type Activity = 'idle' | 'play' | 'study' | 'rest';
+type Activity = 'idle' | 'play' | 'stream' | 'study' | 'rest' | 'coach';
 
 interface Props {
   activity: Activity;
   tables: number;
   home: HomeId;
   setup: Setup;
+  gear: StreamGear;
+  schoolOpen: boolean;
 }
 
 type Ctx = CanvasRenderingContext2D;
@@ -283,6 +285,65 @@ function drawAtico(ctx: Ctx, t: number) {
   drawPlant(ctx, 180, 92, true);
 }
 
+// ── Equipo de streaming y escuela ─────────────────────────────
+
+/** Centro superior de la pantalla principal según el nivel de monitores (para la webcam) */
+const MAIN_SCREEN_TOP: [number, number][] = [
+  [140, 62],
+  [141, 55],
+  [130, 57],
+  [146, 55],
+];
+
+function drawStreamGear(ctx: Ctx, gear: StreamGear, monitors: number, activity: Activity, t: number) {
+  const live = activity === 'stream';
+  if (gear.luz > 0) {
+    // Aro de luz (o foco) junto a la silla
+    rect(ctx, '#333', 81, 60, 1, 38);
+    rect(ctx, '#333', 78, 97, 7, 1);
+    const on = live || activity === 'coach';
+    const c = on ? '#fff7d6' : '#8a8f96';
+    if (gear.luz === 1) {
+      rect(ctx, c, 78, 50, 7, 1);
+      rect(ctx, c, 78, 58, 7, 1);
+      rect(ctx, c, 77, 51, 1, 7);
+      rect(ctx, c, 85, 51, 1, 7);
+    } else {
+      rect(ctx, '#222', 76, 50, 11, 8);
+      rect(ctx, c, 77, 51, 9, 6);
+    }
+    if (on) {
+      ctx.fillStyle = 'rgba(255, 247, 214, 0.08)';
+      ctx.fillRect(84, 46, 30, 40);
+    }
+  }
+  if (gear.camara > 0) {
+    const [cx, cy] = MAIN_SCREEN_TOP[monitors];
+    if (gear.camara === 1) {
+      rect(ctx, '#111', cx - 2, cy - 2, 5, 2);
+      rect(ctx, live && Math.floor(t / 500) % 2 ? '#ff3b3b' : '#555', cx, cy - 2, 1, 1);
+    } else {
+      rect(ctx, '#1a1a1a', cx - 3, cy - 4, 7, 4);
+      rect(ctx, '#3a3a3a', cx - 1, cy - 3, 3, 2);
+      rect(ctx, live ? '#ff3b3b' : '#555', cx + 3, cy - 4, 1, 1);
+    }
+  }
+  if (gear.micro > 0) {
+    // Micro sobre la mesa, a la izquierda del teclado
+    rect(ctx, '#333', 116, 80, 1, 4);
+    rect(ctx, '#333', 114, 83, 5, 1);
+    rect(ctx, gear.micro === 2 ? '#c9a227' : '#2b2b2b', 115, 75, 3, 5);
+    rect(ctx, '#777', 115, 76, 3, 1);
+  }
+}
+
+function drawDiploma(ctx: Ctx) {
+  rect(ctx, '#c9a227', 99, 40, 14, 11);
+  rect(ctx, '#f5f0e1', 100, 41, 12, 9);
+  drawSprite(ctx, SPADE.slice(0, 5), 103, 42, { x: '#0f3d2a' });
+  rect(ctx, '#c0392b', 102, 48, 8, 1);
+}
+
 // ── Setup ─────────────────────────────────────────────────────
 
 function drawDesk(ctx: Ctx, home: HomeId) {
@@ -346,8 +407,30 @@ function drawChair(ctx: Ctx, level: number) {
 }
 
 function drawScreen(ctx: Ctx, x: number, y: number, w: number, h: number, activity: Activity, tables: number, t: number) {
-  if (activity === 'play') {
+  if (activity === 'coach') {
+    // Videollamada con un alumno
+    rect(ctx, '#203040', x, y, w, h);
+    const cx = x + Math.floor(w / 2);
+    rect(ctx, '#6b4a2e', cx - 3, y + 3, 6, 3);
+    rect(ctx, '#e0b088', cx - 3, y + 5, 6, 5);
+    const talk = Math.floor(t / 220) % 2;
+    rect(ctx, '#7a3b3b', cx - 1, y + 8, 2, talk ? 1 : 0.5);
+    rect(ctx, '#c0392b', cx - 5, y + 10, 10, Math.max(1, h - 10));
+    rect(ctx, '#1f7a4a', x + 1, y + h - 5, 6, 4);
+    rect(ctx, '#ffffff', x + 2, y + h - 4, 1, 2);
+    return;
+  }
+  if (activity === 'play' || activity === 'stream') {
     rect(ctx, '#0b2a1d', x, y, w, h);
+    if (activity === 'stream') {
+      // Chat del directo en la esquina
+      rect(ctx, '#1a1030', x + w - 5, y, 5, h);
+      for (let ly = 0; ly < h - 1; ly += 2) {
+        const on = (Math.floor(t / 180) + ly) % 3 !== 0;
+        if (on) rect(ctx, ly % 4 === 0 ? '#b48cff' : '#e9e9e9', x + w - 4, y + h - 2 - ly, 2 + ((ly * 3) % 2), 1);
+      }
+      w -= 5;
+    }
     if (tables <= 0) return;
     const n = Math.min(4, tables);
     const cols = n === 1 ? 1 : 2;
@@ -427,13 +510,13 @@ function drawDeskProps(ctx: Ctx, monitors: number, activity: Activity, t: number
   if (monitors <= 1) {
     rect(ctx, '#c0392b', 155, 79, 4, 5);
     rect(ctx, '#c0392b', 159, 80, 1, 2);
-    if (activity === 'play' || activity === 'study') {
+    if (activity !== 'idle' && activity !== 'rest') {
       const steam = Math.floor(t / 300) % 2;
       rect(ctx, 'rgba(255,255,255,0.5)', 156 + steam, 76, 1, 2);
     }
   }
-  if (activity === 'play') {
-    ctx.fillStyle = 'rgba(80, 220, 130, 0.07)';
+  if (activity === 'play' || activity === 'stream') {
+    ctx.fillStyle = activity === 'stream' ? 'rgba(200, 120, 255, 0.07)' : 'rgba(80, 220, 130, 0.07)';
     ctx.fillRect(100, 52, 80, 34);
   }
 }
@@ -459,8 +542,9 @@ function drawArm(ctx: Ctx, activity: Activity, t: number) {
   if (activity === 'rest') return;
   const ox = 96;
   const oy = 71;
-  const typing = activity === 'play' || activity === 'study';
-  const frame = typing ? Math.floor(t / (activity === 'play' ? 110 : 400)) % 2 : 0;
+  const typing = activity === 'play' || activity === 'stream' || activity === 'study' || activity === 'coach';
+  const fast = activity === 'play' || activity === 'stream';
+  const frame = typing ? Math.floor(t / (fast ? 110 : 400)) % 2 : 0;
   rect(ctx, '#22385e', ox + 8, oy + 12, 4, 5);
   rect(ctx, '#2f4b7c', ox + 10, oy + 14, 20, 2);
   rect(ctx, '#f1c27d', ox + 30, oy + 12 - frame, 2, 2);
@@ -473,10 +557,10 @@ const BACKGROUNDS: Record<HomeId, (ctx: Ctx, t: number) => void> = {
   atico: drawAtico,
 };
 
-export default function Scene({ activity, tables, home, setup }: Props) {
+export default function Scene({ activity, tables, home, setup, gear, schoolOpen }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const props = useRef({ activity, tables, home, setup });
-  props.current = { activity, tables, home, setup };
+  const props = useRef({ activity, tables, home, setup, gear, schoolOpen });
+  props.current = { activity, tables, home, setup, gear, schoolOpen };
 
   useEffect(() => {
     const canvas = ref.current;
@@ -484,15 +568,17 @@ export default function Scene({ activity, tables, home, setup }: Props) {
     if (!canvas || !ctx) return;
     let raf = 0;
     const loop = (t: number) => {
-      const { activity, tables, home, setup } = props.current;
+      const { activity, tables, home, setup, gear, schoolOpen } = props.current;
       ctx.clearRect(0, 0, SCENE_W, SCENE_H);
       BACKGROUNDS[home](ctx, t);
+      if (schoolOpen) drawDiploma(ctx);
       drawChair(ctx, setup.silla);
       drawPlayer(ctx, activity, home, t);
       drawDesk(ctx, home);
       drawPC(ctx, setup.pc, t);
       drawMonitors(ctx, setup.monitores, activity, tables, t);
       drawDeskProps(ctx, setup.monitores, activity, t);
+      drawStreamGear(ctx, gear, setup.monitores, activity, t);
       drawArm(ctx, activity, t);
       raf = requestAnimationFrame(loop);
     };

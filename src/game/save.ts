@@ -1,4 +1,7 @@
 import * as C from './config';
+import { newCoachingState } from './coaching';
+import { newSchoolState } from './school';
+import { computeFame, newStreamState } from './streaming';
 import type { GameState } from './types';
 
 export interface SlotInfo {
@@ -66,6 +69,19 @@ export function migrate(state: GameState, from: number): GameState {
         moves: 0,
       },
     };
+  }
+  if (from < 3) {
+    // Fase 3: streaming, coaching y escuela
+    s = {
+      ...s,
+      fame: s.fame ?? 0,
+      followers: s.followers ?? 0,
+      stream: newStreamState(),
+      coaching: newCoachingState(),
+      school: newSchoolState(),
+      career: { ...s.career, weeksStreamed: 0, weeksCoached: 0 },
+    };
+    s.fame = computeFame(s);
   }
   return { ...s, version: C.SAVE_VERSION };
 }

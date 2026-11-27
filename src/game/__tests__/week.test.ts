@@ -26,7 +26,7 @@ describe('runWeek', () => {
   it('estudiar sube la habilidad con rendimientos decrecientes', () => {
     const g = newGame(1);
     const r1 = runWeek(g, { type: 'study', topic: 'postflop', hours: 40 });
-    expect(r1.after.skills.postflop).toBeCloseTo(25 + 6 * 0.75, 6);
+    expect(r1.after.skills.postflop).toBeCloseTo(25 + 0.25 * 40 * 0.75, 6);
     const high = { ...g, skills: { ...g.skills, postflop: 90 } };
     const r2 = runWeek(high, { type: 'study', topic: 'postflop', hours: 40 });
     expect(r2.after.skills.postflop - 90).toBeLessThan(r1.after.skills.postflop - 25);

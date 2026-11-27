@@ -1,5 +1,8 @@
 import * as C from './config';
+import { newCoachingState } from './coaching';
 import { randomSeed } from './rng';
+import { newSchoolState } from './school';
+import { newStreamState } from './streaming';
 import type { GameState } from './types';
 
 export function newGame(seed: number = randomSeed()): GameState {
@@ -23,6 +26,9 @@ export function newGame(seed: number = randomSeed()): GameState {
     home: 'habitacion',
     setup: { silla: 0, monitores: 0, pc: 0, software: 0 },
     downswing: { cumBI: 0, peakBI: 0, announced: 0 },
+    stream: newStreamState(),
+    coaching: newCoachingState(),
+    school: newSchoolState(),
     rakeHistory: [],
     limitStats: {},
     sessions: [],
@@ -44,6 +50,8 @@ export function newGame(seed: number = randomSeed()): GameState {
       maxDownswingBI: 0,
       badBeats: 0,
       moves: 0,
+      weeksStreamed: 0,
+      weeksCoached: 0,
     },
     createdAt: Date.now(),
   };

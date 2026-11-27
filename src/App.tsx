@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import * as C from './game/config';
 import { useStore } from './store';
-import { signedEur } from './ui/format';
+import { coachMissing, coachUnlocked } from './game/coaching';
+import { streamMissing } from './game/streaming';
+import CoachModal from './ui/CoachModal';
+import { num, signedEur } from './ui/format';
+import SchoolPanel from './ui/SchoolPanel';
+import StreamingPanel from './ui/StreamingPanel';
 import GraphModal from './ui/GraphModal';
 import { activityLabel } from './ui/live';
 import Modal from './ui/Modal';
@@ -87,6 +92,7 @@ function SceneOverlay() {
       if (recent) emote = recent.kind === 'herocall' ? '😎' : recent.kind === 'exhausted' ? '😴' : '😤';
       else emote = bi <= -3 ? '😤' : bi >= 3 ? '😎' : '';
     } else if (running.result.action.type === 'study') emote = '🤓';
+    else if (running.result.action.type === 'coach') emote = '🗣️';
   } else if (game.tilt >= 50) emote = '😤';
   else if (game.energy < 25) emote = '🥱';
 
@@ -123,16 +129,30 @@ function GameScreen() {
 
   const action = running?.result.action;
   const activity = !action ? 'idle' : action.type;
-  const tables = action?.type === 'play' ? action.tables : 0;
+  const tables = action?.type === 'play' || action?.type === 'stream' ? action.tables : 0;
   const busy = !!running;
+  const streamLocks = streamMissing(game);
+  const canCoach = coachUnlocked(game);
 
   return (
     <div className="game">
       <TopBar />
       <main className="stage">
         <div className="scene pixel-box">
-          <Scene activity={activity} tables={tables} home={game.home} setup={game.setup} />
+          <Scene
+            activity={activity}
+            tables={tables}
+            home={game.home}
+            setup={game.setup}
+            gear={game.stream.gear}
+            schoolOpen={game.school.open}
+          />
           <SceneOverlay />
+          {running && action?.type === 'stream' && (
+            <div className="live-badge">
+              <span className="live-dot" /> EN DIRECTO · {num(running.result.stream?.viewers ?? 0)} 👀
+            </div>
+          )}
           <div className="scene-label">{getHome(game.home).name}</div>
           {running && (
             <div className="progress">
@@ -165,11 +185,21 @@ function GameScreen() {
           <button className="action-btn rest" disabled={busy} onClick={() => openModal('rest')}>
             <span className="ico">🛏️</span>Descansar
           </button>
-          <button className="action-btn locked" disabled title="Se desbloquea más adelante">
-            <span className="ico">🔒</span>Streamear
+          <button
+            className={`action-btn stream ${streamLocks.length ? 'locked' : ''}`}
+            disabled={busy}
+            title={streamLocks.length ? `Te falta: ${streamLocks.join(', ')}` : 'Juega en directo'}
+            onClick={() => openModal(streamLocks.length ? 'streaming' : 'stream')}
+          >
+            <span className="ico">{streamLocks.length ? '🔒' : '🔴'}</span>Streamear
           </button>
-          <button className="action-btn locked" disabled title="Se desbloquea más adelante">
-            <span className="ico">🔒</span>Coaching
+          <button
+            className={`action-btn coach ${canCoach ? '' : 'locked'}`}
+            disabled={busy}
+            title={canCoach ? 'Da clases particulares' : `Te falta: ${coachMissing(game).join(', ')}`}
+            onClick={() => openModal(canCoach ? 'coach' : 'school')}
+          >
+            <span className="ico">{canCoach ? '🧑‍🏫' : '🔒'}</span>Coaching
           </button>
         </nav>
 
@@ -183,6 +213,12 @@ function GameScreen() {
           <button className="panel-btn" disabled={busy} onClick={() => openModal('shop')}>
             🛒 Tienda
           </button>
+          <button className="panel-btn" disabled={busy} onClick={() => openModal('streaming')}>
+            🎥 Streaming
+          </button>
+          <button className="panel-btn" disabled={busy} onClick={() => openModal('school')}>
+            🏫 Escuela
+          </button>
           <button className="panel-btn" disabled={busy} onClick={() => openModal('save')}>
             💾 Partida
           </button>
@@ -190,6 +226,10 @@ function GameScreen() {
       </main>
 
       {modal === 'play' && <PlayModal />}
+      {modal === 'stream' && <PlayModal mode="stream" />}
+      {modal === 'coach' && <CoachModal />}
+      {modal === 'streaming' && <StreamingPanel />}
+      {modal === 'school' && <SchoolPanel />}
       {modal === 'study' && <StudyModal />}
       {modal === 'rest' && <RestModal />}
       {modal === 'stats' && <StatsModal />}

@@ -12,6 +12,8 @@ export function liveBankroll(r: WeekResult, progress: number): number {
 export function activityLabel(r: WeekResult): string {
   const a = r.action;
   if (a.type === 'play') return `Jugando ${a.limit} · ${a.tables} mesa${a.tables > 1 ? 's' : ''}`;
+  if (a.type === 'stream') return `🔴 En directo en ${a.limit} · ${a.tables} mesa${a.tables > 1 ? 's' : ''}`;
+  if (a.type === 'coach') return 'Dando clases';
   if (a.type === 'study') return 'Estudiando';
   return 'Descansando';
 }

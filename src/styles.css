@@ -1060,3 +1060,80 @@ h3 {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ── Fase 3: streaming, coaching y escuela ─────────────── */
+.live-badge {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  line-height: 1;
+  background: #c0392b;
+  color: #fff;
+  padding: 6px 8px;
+  border: 2px solid #000;
+}
+.live-dot {
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  animation: blink 1s steps(2) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+.action-btn.stream:not(.locked) {
+  border-color: #c0392b;
+}
+.action-btn.locked:not(:disabled) {
+  opacity: 0.7;
+  border-style: dashed;
+}
+.unlock-box {
+  background: #0006;
+  border: 2px dashed var(--c-wood-light);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.unlock-box ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.course-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.course-grid .topic-btn {
+  grid-template-columns: 1fr;
+  grid-template-areas: 'name' 'desc';
+}
+.course-grid .topic-btn:disabled {
+  opacity: 0.45;
+}
+@media (max-width: 760px) {
+  .action-btn.locked {
+    display: flex;
+  }
+  .actions {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .action-btn {
+    font-size: 7px;
+    padding: 8px 2px;
+  }
+  .panels {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .course-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -19,6 +19,9 @@ npm run build    # build de producción en dist/
   - `simulation.ts`: winrate esperado, varianza por tramos, showdown/non-showdown, rakeback.
   - `week.ts`: aplica la acción de la semana (jugar, estudiar, descansar), la moral, los gastos del mes y la bancarrota.
   - `setup.ts`: mejoras del setup (silla, monitores, ordenador, software), viviendas y gastos fijos.
+  - `streaming.ts`: fama, equipo de streaming, espectadores, seguidores, subs, donaciones, patrocinios y clips virales.
+  - `coaching.ts`: clases particulares (tarifa, demanda, reputación).
+  - `school.ts`: escuela de póker (miembros, coaches contratados, cursos con ingresos pasivos).
   - `save.ts`: guardado en 3 ranuras y exportación/importación JSON.
   - `__tests__/`: tests de Vitest.
 - `src/ui/`: componentes React y pixel art (Canvas).

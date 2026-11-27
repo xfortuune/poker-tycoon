@@ -56,6 +56,10 @@ export default function TopBar() {
         <span className="stat-label">Seguidores</span>
         <span className="stat-value">{num(game.followers)}</span>
       </div>
+      <div className="stat" title="Fama: sube con tus seguidores, el límite más alto que has jugado y tu reputación como coach">
+        <span className="stat-label">Fama</span>
+        <span className="stat-value gold">{Math.floor(game.fame)}</span>
+      </div>
       <div className="speed" role="group" aria-label="Velocidad">
         <button className={`speed-btn ${paused ? 'on' : ''}`} onClick={togglePause} aria-label="Pausa" title="Pausa">
           ❚❚

@@ -98,7 +98,62 @@ export default function SummaryModal() {
       )}
 
       {!p && r.action.type === 'study' && <p className="lead">Has pasado la semana estudiando. 📚</p>}
+      {r.action.type === 'coach' && <p className="lead">Has pasado la semana dando clases. 🧑‍🏫</p>}
       {!p && r.action.type === 'rest' && <p className="lead">Has desconectado y recargado pilas. 🌙</p>}
+
+      {r.stream && r.action.type === 'stream' && (
+        <>
+          <h3>🔴 Directo</h3>
+          {r.stream.viral && <p className="warning big">🔥 {r.stream.viral}</p>}
+          <div className="summary-grid">
+            <div className="kpi">
+              <span>Espectadores medios</span>
+              <strong>{num(r.stream.viewers)}</strong>
+            </div>
+            <div className="kpi">
+              <span>Nuevos seguidores</span>
+              <strong className="pos">+{num(r.stream.newFollowers + r.stream.viralFollowers)}</strong>
+            </div>
+            <div className="kpi">
+              <span>Suscriptores</span>
+              <strong>{num(r.stream.subs)}</strong>
+            </div>
+            <div className="kpi">
+              <span>Subs</span>
+              <strong className="pos">{signedEur(r.stream.subsEur)}</strong>
+            </div>
+            <div className="kpi">
+              <span>Donaciones</span>
+              <strong className="pos">{signedEur(r.stream.donationsEur)}</strong>
+            </div>
+            <div className="kpi">
+              <span>Patrocinios</span>
+              <strong className="pos">{signedEur(r.stream.sponsorEur)}</strong>
+            </div>
+          </div>
+        </>
+      )}
+      {r.coach && (
+        <>
+          <h3>🧑‍🏫 Clases</h3>
+          <div className="summary-grid">
+            <div className="kpi">
+              <span>Horas</span>
+              <strong>
+                {r.coach.hoursSold} / {r.coach.hoursOffered}
+              </strong>
+            </div>
+            <div className="kpi">
+              <span>Ingresos ({eur(r.coach.rate)}/h)</span>
+              <strong className="pos">{signedEur(r.coach.incomeEur)}</strong>
+            </div>
+            <div className="kpi">
+              <span>Reputación</span>
+              <strong className="pos">+{d1(r.coach.reputationDelta)}</strong>
+            </div>
+          </div>
+        </>
+      )}
 
       <h3>Cambios</h3>
       <ul className="changes">
@@ -115,12 +170,37 @@ export default function SummaryModal() {
         <li>
           Moral: {Math.round(r.before.moral)} → <strong>{Math.round(r.after.moral)}</strong>
         </li>
+        {r.stream && r.action.type !== 'stream' && r.stream.totalEur > 0.005 && (
+          <li>
+            Subs (sin directo): <strong className="pos">{signedEur(r.stream.subsEur)}</strong>
+            {r.stream.churned > 0 && <span className="neg"> · −{num(r.stream.churned)} seguidores por no emitir</span>}
+          </li>
+        )}
+        {r.school && (
+          <li>
+            Escuela: <strong className="pos">{signedEur(r.school.totalEur)}</strong>{' '}
+            <span className="muted small">
+              ({num(r.school.members)} miembros, {num(r.school.courseSales)} cursos vendidos)
+            </span>
+          </li>
+        )}
+        {Math.abs(r.fameDelta) >= 0.1 && (
+          <li>
+            Fama: {d1(r.before.fame)} → <strong>{d1(r.after.fame)}</strong>
+          </li>
+        )}
+        {r.after.followers !== r.before.followers && (
+          <li>
+            Seguidores: {num(r.before.followers)} → <strong>{num(r.after.followers)}</strong>
+          </li>
+        )}
         {r.expenses && r.expenses.total > 0 && (
           <li>
             Gastos del mes: <strong className="neg">−{eur(r.expenses.total)}</strong>{' '}
             <span className="muted small">
               (alquiler {eur(r.expenses.rent)}, comida {eur(r.expenses.food)}, facturas {eur(r.expenses.bills)}, suscripciones{' '}
-              {eur(r.expenses.subscriptions)})
+              {eur(r.expenses.subscriptions)}
+              {r.expenses.school > 0 && `, escuela ${eur(r.expenses.school)}`})
             </span>
           </li>
         )}

@@ -85,11 +85,11 @@ export const VIP_LEVELS = [
 export const START_SKILL = 25;
 export const SKILL_MAX = 100;
 /** Ganancia por hora de estudio = STUDY_GAIN_PER_HOUR · (100 − habilidad)/100 */
-export const STUDY_GAIN_PER_HOUR = 0.15;
+export const STUDY_GAIN_PER_HOUR = 0.25;
 export const MIN_STUDY_HOURS = 5;
 export const MAX_STUDY_HOURS = 40;
-/** Puntos de Postflop y Lectura por cada 10.000 manos jugadas (antes del factor decreciente) */
-export const PLAY_XP_PER_10K_HANDS = 0.15;
+/** Puntos de Preflop, Postflop y Lectura por cada 10.000 manos jugadas (antes del factor decreciente) */
+export const PLAY_XP_PER_10K_HANDS = 0.6;
 
 // ── Energía y tilt ──────────────────────────────────────────
 export const START_ENERGY = 100;
@@ -266,4 +266,142 @@ export const WEEK_DURATION_MS = 4000;
 // ── Guardado ────────────────────────────────────────────────
 export const SAVE_SLOTS = 3;
 export const SAVE_KEY_PREFIX = 'poker-tycoon-slot-';
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
+
+// ── Fama ────────────────────────────────────────────────────
+/** fama = 8·log10(1+seguidores) + 4·(índice del límite máximo + 1) + 0,15·reputación + bonus escuela */
+export const FAME_PER_LOG_FOLLOWERS = 8;
+export const FAME_PER_LIMIT = 4;
+export const FAME_PER_REPUTATION = 0.15;
+export const FAME_SCHOOL_BONUS = 5;
+
+// ── Streaming ───────────────────────────────────────────────
+export type StreamGearId = 'micro' | 'camara' | 'luz';
+
+export interface StreamGearItem {
+  name: string;
+  price: number;
+  desc: string;
+  /** Aporta a la calidad del directo */
+  quality: number;
+}
+
+export const STREAM_GEAR_CATEGORIES: { id: StreamGearId; name: string }[] = [
+  { id: 'micro', name: 'Micrófono' },
+  { id: 'camara', name: 'Cámara' },
+  { id: 'luz', name: 'Iluminación' },
+];
+
+export const STREAM_GEAR: Record<StreamGearId, StreamGearItem[]> = {
+  micro: [
+    { name: 'Sin micrófono', price: 0, desc: 'Nadie te oye.', quality: 0 },
+    { name: 'Micro USB', price: 80, desc: 'Se te entiende… casi siempre.', quality: 1 },
+    { name: 'Micro de estudio', price: 350, desc: 'Voz de locutor de radio.', quality: 2 },
+  ],
+  camara: [
+    { name: 'Sin cámara', price: 0, desc: 'Solo se ven las mesas.', quality: 0 },
+    { name: 'Webcam HD', price: 60, desc: 'Tu cara en una esquina.', quality: 1 },
+    { name: 'Cámara réflex', price: 700, desc: 'Fondo desenfocado de profesional.', quality: 2 },
+  ],
+  luz: [
+    { name: 'Lámpara de mesa', price: 0, desc: 'Sales con ojeras.', quality: 0 },
+    { name: 'Aro de luz', price: 40, desc: 'Luz bonita y uniforme.', quality: 0.5 },
+    { name: 'Kit de focos', price: 250, desc: 'Plató de televisión.', quality: 1 },
+  ],
+};
+
+/** Se desbloquea al llegar a NL25 (índice 3) o con esta fama */
+export const STREAM_UNLOCK_LIMIT_INDEX = 3;
+export const STREAM_UNLOCK_FAME = 15;
+/** Para emitir necesitas micro, cámara y un segundo monitor (nivel de monitores ≥ 1) */
+export const STREAM_MIN_MONITORS = 1;
+/** Puntos de habilidad que pierdes al jugar mientras hablas con el chat */
+export const STREAM_SKILL_PENALTY = 3;
+export const STREAM_ENERGY_MULT = 1.15;
+
+/** Espectadores medios = (3 + 0,25·seguidores^0,6) · calidad · (1 + 0,15·índice del límite) */
+export const VIEWERS_BASE = 3;
+export const VIEWERS_FACTOR = 0.25;
+export const VIEWERS_EXP = 0.6;
+export const VIEWERS_PER_LIMIT = 0.15;
+/** Calidad = 0,6 + 0,2 · suma de la calidad del equipo (1,0 con micro y webcam básicos) */
+export const STREAM_QUALITY_BASE = 0.6;
+export const STREAM_QUALITY_PER_POINT = 0.2;
+/** Seguidores nuevos por espectador y hora */
+export const FOLLOWS_PER_VIEWER_HOUR = 0.05;
+/** Saturación: el crecimiento se frena según te acercas a este número de seguidores */
+export const FOLLOWERS_SATURATION = 2_000_000;
+export const STREAM_WIN_MULT = 1.2;
+export const STREAM_LOSS_MULT = 0.85;
+/** Clips virales */
+export const VIRAL_BASE_CHANCE = 0.03;
+export const VIRAL_CHANCE_PER_EVENT = 0.05;
+export const VIRAL_MIN_FOLLOWERS = 150;
+export const VIRAL_FOLLOWER_FRACTION = 0.05;
+/** Si no emites, pierdes este % de seguidores por semana (a partir de la segunda semana sin directo) */
+export const FOLLOWER_CHURN_IDLE = 0.01;
+/** Suscriptores: tienden a este % de los seguidores cuando emites y bajan un 10 %/semana si no */
+export const SUB_RATE = 0.012;
+export const SUB_DRIFT = 0.25;
+export const SUB_DECAY_IDLE = 0.1;
+/** Lo que te llega de cada sub al mes (tras la comisión de la plataforma) */
+export const SUB_PRICE_NET = 2.5;
+export const DONATION_PER_VIEWER_HOUR = 0.04;
+/** Patrocinios de marcas: a partir de estos seguidores, si emites al menos 10 h */
+export const BRAND_SPONSOR_MIN_FOLLOWERS = 5000;
+export const BRAND_SPONSOR_MIN_HOURS = 10;
+export const BRAND_SPONSOR_PER_FOLLOWER_WEEK = 0.004;
+
+// ── Coaching ────────────────────────────────────────────────
+/** Se desbloquea con NL50 (índice 4) y esta fama */
+export const COACH_UNLOCK_LIMIT_INDEX = 4;
+export const COACH_UNLOCK_FAME = 25;
+export const MIN_COACH_HOURS = 2;
+export const MAX_COACH_HOURS = 40;
+/** Tarifa €/h = 10 · 1,35^índice del límite máximo + 0,5 · reputación */
+export const COACH_RATE_BASE = 10;
+export const COACH_RATE_GROWTH = 1.35;
+export const COACH_RATE_PER_REP = 0.5;
+/** Horas que te piden los alumnos por semana = 3 + 0,25·fama + 0,2·reputación */
+export const COACH_DEMAND_BASE = 3;
+export const COACH_DEMAND_PER_FAME = 0.25;
+export const COACH_DEMAND_PER_REP = 0.2;
+export const COACH_ENERGY_PER_HOUR = 0.8;
+/** Reputación por hora de clase = 0,15 · (habilidad / 50), con rendimientos decrecientes */
+export const COACH_REP_PER_HOUR = 0.15;
+/** Enseñar también te hace mejorar un poco (Preflop y Postflop) */
+export const COACH_XP_PER_HOUR = 0.03;
+/** Horas por alumno y semana (solo para mostrar cuántos alumnos tienes) */
+export const COACH_HOURS_PER_STUDENT = 2;
+
+// ── Escuela de póker ────────────────────────────────────────
+export const SCHOOL_UNLOCK_REPUTATION = 40;
+export const SCHOOL_UNLOCK_FAME = 40;
+export const SCHOOL_OPEN_COST = 15000;
+export const SCHOOL_PLATFORM_MONTHLY = 250;
+/** Cuota mensual de cada miembro */
+export const SCHOOL_MEMBERSHIP_PRICE = 30;
+/** Miembros objetivo = 4·fama + 0,6·Σ habilidad de los coaches + 0,2·Σ calidad de los cursos */
+export const SCHOOL_MEMBERS_PER_FAME = 4;
+export const SCHOOL_MEMBERS_PER_COACH_SKILL = 0.6;
+export const SCHOOL_MEMBERS_PER_COURSE_QUALITY = 0.2;
+/** Cada semana los miembros se acercan este % al objetivo */
+export const SCHOOL_MEMBERS_DRIFT = 0.1;
+export const SCHOOL_MAX_COACHES = 5;
+export const SCHOOL_CANDIDATES = 3;
+/** Sueldo mensual de un coach = 30 € por punto de habilidad */
+export const COACH_SALARY_PER_SKILL = 30;
+export const COACH_SKILL_MIN = 40;
+export const COACH_SKILL_MAX = 90;
+/** Producir un curso */
+export const COURSE_COST = 3000;
+/** Calidad = 0,7·tu habilidad en el tema + 0,3·mejor coach especialista (o tu habilidad si no hay) */
+export const COURSE_PLAYER_WEIGHT = 0.7;
+/** Ventas por semana = (3 + 0,02·miembros + 0,00005·seguidores) · calidad/100 · novedad */
+export const COURSE_BASE_SALES = 3;
+export const COURSE_SALES_PER_MEMBER = 0.02;
+export const COURSE_SALES_PER_FOLLOWER = 0.00005;
+/** La novedad se reduce a la mitad cada 26 semanas (mínimo 10 %) */
+export const COURSE_HALF_LIFE_WEEKS = 26;
+export const COURSE_MIN_NOVELTY = 0.1;
+export const COURSE_PLATFORM_FEE = 0.1;
