@@ -1,4 +1,5 @@
 import * as C from '../game/config';
+import { currentItem, getHome } from '../game/setup';
 import { baseSkill, vipLevelFor } from '../game/simulation';
 import { SKILL_IDS, SKILL_LABELS } from '../game/skills';
 import { bb100 } from '../game/stats';
@@ -62,7 +63,31 @@ export default function StatsModal() {
           <span>Bancarrotas</span>
           <strong>{c.busts}</strong>
         </div>
+        <div className="kpi">
+          <span>Peor downswing</span>
+          <strong className="neg">{d1(c.maxDownswingBI)} BI</strong>
+        </div>
+        <div className="kpi">
+          <span>Bad beats y coolers</span>
+          <strong>{c.badBeats}</strong>
+        </div>
+        <div className="kpi">
+          <span>Gastos fijos pagados</span>
+          <strong className="neg">{eur(c.expensesEur)}</strong>
+        </div>
       </div>
+
+      <h3>Tu setup</h3>
+      <ul className="setup-list">
+        {C.UPGRADE_CATEGORIES.map(({ id, name }) => (
+          <li key={id}>
+            {name}: <strong>{currentItem(game.setup, id).name}</strong>
+          </li>
+        ))}
+        <li>
+          Vivienda: <strong>{getHome(game.home).name}</strong>
+        </li>
+      </ul>
 
       <h3>Por límite</h3>
       <div className="table-wrap">

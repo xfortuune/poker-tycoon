@@ -7,6 +7,8 @@ import { activityLabel } from './ui/live';
 import Modal from './ui/Modal';
 import PlayModal from './ui/PlayModal';
 import SaveModal from './ui/SaveModal';
+import ShopModal from './ui/ShopModal';
+import { getHome, weeklyRecovery } from './game/setup';
 import Scene, { HEAD_POS } from './ui/Scene';
 import StatsModal from './ui/StatsModal';
 import StudyModal from './ui/StudyModal';
@@ -36,14 +38,15 @@ function RestModal() {
   const doAction = useStore((s) => s.doAction);
   const openModal = useStore((s) => s.openModal);
   const game = useStore((s) => s.game)!;
+  const restGain = C.REST_ENERGY + weeklyRecovery(game) - C.WEEKLY_ENERGY_RECOVERY;
   return (
     <Modal title="Descansar" onClose={() => openModal(null)}>
       <p>
-        Una semana sin mesas: recuperas <strong>+{C.REST_ENERGY}</strong> de energía y el tilt baja{' '}
-        <strong>{C.REST_TILT}+</strong> puntos.
+        Una semana sin mesas: recuperas <strong>+{Math.round(restGain)}</strong> de energía, el tilt baja{' '}
+        <strong>{C.REST_TILT}+</strong> puntos y sube la moral.
       </p>
       <p className="muted">
-        Energía {Math.round(game.energy)} → {Math.min(100, Math.round(game.energy + C.REST_ENERGY))}
+        Energía {Math.round(game.energy)} → {Math.min(100, Math.round(game.energy + restGain))}
       </p>
       <div className="modal-actions">
         <button className="btn" onClick={() => openModal(null)}>
@@ -79,7 +82,10 @@ function SceneOverlay() {
       const idx = Math.floor(running.progress * p.curveEur.length);
       const cur = p.curveEur[Math.min(idx, p.curveEur.length - 1)] ?? 0;
       const bi = (p.curveEur.length ? cur : 0) / (C.LIMITS.find((l) => l.id === p.limit)!.bb * C.BUYIN_BB);
-      emote = bi <= -3 ? '😤' : bi >= 3 ? '😎' : '';
+      const handsNow = running.progress * p.hands;
+      const recent = [...p.events].reverse().find((e) => e.hand <= handsNow && handsNow - e.hand < p.hands * 0.08);
+      if (recent) emote = recent.kind === 'herocall' ? '😎' : recent.kind === 'exhausted' ? '😴' : '😤';
+      else emote = bi <= -3 ? '😤' : bi >= 3 ? '😎' : '';
     } else if (running.result.action.type === 'study') emote = '🤓';
   } else if (game.tilt >= 50) emote = '😤';
   else if (game.energy < 25) emote = '🥱';
@@ -125,9 +131,9 @@ function GameScreen() {
       <TopBar />
       <main className="stage">
         <div className="scene pixel-box">
-          <Scene activity={activity} tables={tables} />
+          <Scene activity={activity} tables={tables} home={game.home} setup={game.setup} />
           <SceneOverlay />
-          <div className="scene-label">Tu habitación</div>
+          <div className="scene-label">{getHome(game.home).name}</div>
           {running && (
             <div className="progress">
               <span>
@@ -142,7 +148,9 @@ function GameScreen() {
             <div className="tip">
               {game.week === 0
                 ? '👋 Elige qué haces esta semana. Empieza jugando NL2 o estudiando.'
-                : '💡 Consejo: vigila la energía y descansa antes de que baje de 50.'}
+                : game.week === 1
+                  ? '💡 Consejo: vigila la energía y descansa antes de que baje de 50.'
+                  : '🛒 En la Tienda puedes mejorar tu setup y ver tus gastos del mes.'}
             </div>
           )}
         </div>
@@ -172,6 +180,9 @@ function GameScreen() {
           <button className="panel-btn" disabled={busy} onClick={() => openModal('graph')}>
             📈 Gráfica
           </button>
+          <button className="panel-btn" disabled={busy} onClick={() => openModal('shop')}>
+            🛒 Tienda
+          </button>
           <button className="panel-btn" disabled={busy} onClick={() => openModal('save')}>
             💾 Partida
           </button>
@@ -184,6 +195,7 @@ function GameScreen() {
       {modal === 'stats' && <StatsModal />}
       {modal === 'graph' && <GraphModal />}
       {modal === 'save' && <SaveModal />}
+      {modal === 'shop' && <ShopModal />}
       {summary && !modal && <SummaryModal />}
     </div>
   );

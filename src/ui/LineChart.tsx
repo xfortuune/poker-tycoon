@@ -36,10 +36,12 @@ export default function LineChart({ series, height = 260, xLabel, formatY = Stri
   yMax += span * 0.05;
   yMin -= span * 0.05;
 
-  const sx = (x: number) => pad.l + ((x - xMin) / (xMax - xMin)) * (W - pad.l - pad.r);
-  const sy = (y: number) => pad.t + (1 - (y - yMin) / (yMax - yMin)) * (H - pad.t - pad.b);
   const ticks = 4;
   const yTicks = Array.from({ length: ticks + 1 }, (_, i) => yMin + ((yMax - yMin) * i) / ticks);
+  // El margen izquierdo se adapta a la etiqueta más larga del eje Y
+  pad.l = Math.max(48, 14 + Math.max(...yTicks.map((v) => formatY(v).length)) * 7.5);
+  const sx = (x: number) => pad.l + ((x - xMin) / (xMax - xMin)) * (W - pad.l - pad.r);
+  const sy = (y: number) => pad.t + (1 - (y - yMin) / (yMax - yMin)) * (H - pad.t - pad.b);
   const xTicks = Array.from({ length: 4 }, (_, i) => xMin + ((xMax - xMin) * (i + 1)) / 4);
 
   return (

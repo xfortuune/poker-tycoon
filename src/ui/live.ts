@@ -15,3 +15,12 @@ export function activityLabel(r: WeekResult): string {
   if (a.type === 'study') return 'Estudiando';
   return 'Descansando';
 }
+
+/** Tilt mostrado durante la sesión: sube con cada evento según avanza la animación */
+export function liveTilt(r: WeekResult, progress: number): number {
+  if (progress >= 1 || !r.play) return progress >= 1 ? r.after.tilt : r.before.tilt;
+  const handsNow = progress * r.play.hands;
+  let t = r.before.tilt;
+  for (const ev of r.play.events) if (ev.hand <= handsNow) t += ev.tiltDelta;
+  return Math.max(0, Math.min(100, t));
+}

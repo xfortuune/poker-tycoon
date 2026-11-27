@@ -46,9 +46,28 @@ export function deserialize(json: string): { state: GameState; savedAt: number }
   return { state: st, savedAt: f.savedAt ?? Date.now() };
 }
 
-function migrate(state: GameState, _from: number): GameState {
-  // Aquí se añadirán las migraciones entre versiones del guardado.
-  return { ...state, version: C.SAVE_VERSION };
+/** Actualiza partidas guardadas con versiones anteriores del juego */
+export function migrate(state: GameState, from: number): GameState {
+  let s = { ...state };
+  if (from < 2) {
+    // Fase 2: vivienda, setup, moral, downswing de carrera y nuevas estadísticas
+    s = {
+      ...s,
+      moral: C.HOMES[0].moral,
+      home: 'habitacion',
+      setup: { silla: 0, monitores: 0, pc: 0, software: 0 },
+      downswing: { cumBI: 0, peakBI: 0, announced: 0 },
+      career: {
+        ...s.career,
+        expensesEur: 0,
+        spentEur: 0,
+        maxDownswingBI: 0,
+        badBeats: 0,
+        moves: 0,
+      },
+    };
+  }
+  return { ...s, version: C.SAVE_VERSION };
 }
 
 function isValidState(s: GameState): boolean {

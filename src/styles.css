@@ -105,7 +105,6 @@ h3 {
   background: var(--c-panel-2);
   border: 3px solid var(--c-wood-light);
   box-shadow: 3px 3px 0 #000;
-  text-transform: uppercase;
   transition: transform 0.05s;
 }
 .btn:hover:not(:disabled) {
@@ -237,7 +236,6 @@ h3 {
   font-family: var(--font-pixel);
   font-size: 8px;
   color: var(--c-muted);
-  text-transform: uppercase;
 }
 .stat-value {
   font-family: var(--font-retro);
@@ -400,7 +398,6 @@ h3 {
   gap: 12px;
   font-family: var(--font-pixel);
   font-size: 11px;
-  text-transform: uppercase;
   padding: 14px 12px;
   background: var(--c-panel-2);
   border: 3px solid var(--c-wood-light);
@@ -943,5 +940,123 @@ h3 {
     font-size: 13px;
     padding: 8px 10px;
     border-width: 2px 0 0;
+  }
+}
+
+/* ── Fase 2: moral, tienda, eventos ────────────────────── */
+.bar-moral > div {
+  background: repeating-linear-gradient(90deg, #5aa9ff 0 6px, #4a8fd9 6px 8px);
+}
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.tab {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  padding: 9px 12px;
+  background: var(--c-panel-2);
+  border: 3px solid var(--c-wood);
+}
+.tab.on {
+  background: var(--c-felt);
+  border-color: var(--c-gold);
+}
+.shop-list {
+  display: grid;
+  gap: 8px;
+}
+.shop-item {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  background: #0006;
+  border: 2px solid var(--c-wood);
+}
+.shop-item.current {
+  border-color: var(--c-gold);
+  background: #1f6b4a33;
+}
+.shop-icon {
+  font-size: 26px;
+  text-align: center;
+}
+.shop-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.shop-cat {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--c-muted);
+}
+.shop-next {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--c-wood);
+  font-size: 14px;
+}
+.shop-buy {
+  text-align: right;
+}
+.shop-buy .btn:disabled {
+  opacity: 0.45;
+}
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+.total-row td {
+  border-top: 2px solid var(--c-wood);
+  color: var(--c-gold);
+}
+.events {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.events li {
+  background: #0006;
+  border-left: 3px solid currentColor;
+  padding: 5px 8px;
+  font-size: 14px;
+}
+.ev-ico {
+  margin-right: 4px;
+}
+.setup-list {
+  margin: 0;
+  padding-left: 18px;
+  columns: 2;
+}
+@media (max-width: 760px) {
+  .shop-item {
+    grid-template-columns: 32px 1fr;
+  }
+  .shop-buy {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+  .setup-list {
+    columns: 1;
+  }
+}
+@media (max-width: 760px) {
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 }

@@ -1,6 +1,6 @@
-import type { LimitId } from './config';
+import type { HomeId, LimitId, UpgradeCategory } from './config';
 
-export type { LimitId };
+export type { HomeId, LimitId, UpgradeCategory };
 
 export type SkillId = 'preflop' | 'postflop' | 'lectura' | 'mental';
 
@@ -53,6 +53,42 @@ export interface CareerStats {
   weeksPlayed: number;
   weeksStudied: number;
   weeksRested: number;
+  /** Gastos fijos pagados (alquiler, comida, suscripciones) */
+  expensesEur: number;
+  /** Dinero gastado en mejoras y mudanzas */
+  spentEur: number;
+  /** Mayor downswing de la carrera en buy-ins (del límite en que ocurrió cada tramo) */
+  maxDownswingBI: number;
+  badBeats: number;
+  moves: number;
+}
+
+/** Downswing de la carrera medido en buy-ins, para los eventos de tilt */
+export interface DownswingState {
+  cumBI: number;
+  peakBI: number;
+  /** Cuántos eventos de DOWNSWING_EVENTS se han anunciado desde el último máximo */
+  announced: number;
+}
+
+export type Setup = Record<UpgradeCategory, number>;
+
+export type SessionEventKind = 'badbeat' | 'cooler' | 'herocall' | 'downswing' | 'exhausted';
+
+export interface SessionEvent {
+  /** Manos jugadas en la sesión cuando ocurrió */
+  hand: number;
+  kind: SessionEventKind;
+  text: string;
+  tiltDelta: number;
+}
+
+export interface ExpensesBreakdown {
+  rent: number;
+  food: number;
+  bills: number;
+  subscriptions: number;
+  total: number;
 }
 
 export interface GameState {
@@ -68,6 +104,10 @@ export interface GameState {
   tilt: number;
   fame: number;
   followers: number;
+  moral: number;
+  home: HomeId;
+  setup: Setup;
+  downswing: DownswingState;
   /** Rake pagado (€) en las últimas semanas, para el nivel VIP */
   rakeHistory: number[];
   limitStats: Partial<Record<LimitId, LimitStats>>;
@@ -94,12 +134,17 @@ export interface PlayOutcome {
   rakebackEur: number;
   vipLevel: string;
   rakebackRate: number;
-  /** Winrate esperado con el que se simuló (bb/100) */
+  /** Winrate esperado al empezar la sesión (bb/100) */
   expectedWR: number;
   /** Ganancia acumulada en € tras cada tramo (para la animación y el resumen) */
   curveEur: number[];
-  /** La sesión terminó antes por quedarse sin buy-ins para el límite */
+  /** La sesión terminó antes (sin buy-ins o sin energía) */
   stoppedEarly: boolean;
+  stopReason?: 'bankroll' | 'energia';
+  /** Winrate medio realmente aplicado (con tilt y cansancio dinámicos) */
+  avgWR: number;
+  /** Eventos de la sesión: bad beats, coolers, hero calls, downswings */
+  events: SessionEvent[];
 }
 
 export interface WeekResult {
@@ -111,6 +156,9 @@ export interface WeekResult {
   energyDelta: number;
   tiltDelta: number;
   bankrollDelta: number;
+  moralDelta: number;
+  /** Gastos del mes, si esta semana tocaba pagarlos */
+  expenses?: ExpensesBreakdown;
   busted: boolean;
   messages: string[];
 }

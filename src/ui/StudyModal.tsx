@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import * as C from '../game/config';
-import { SKILL_IDS, SKILL_LABELS, studyGain } from '../game/skills';
+import { weeklyRecovery } from '../game/setup';
+import { SKILL_IDS, SKILL_LABELS } from '../game/skills';
+import { isExhausted, maxHoursThisWeek, studyGainFor } from '../game/week';
 import type { SkillId } from '../game/types';
 import { useStore } from '../store';
 import { d1 } from './format';
@@ -18,8 +20,9 @@ export default function StudyModal() {
   const doAction = useStore((s) => s.doAction);
   const openModal = useStore((s) => s.openModal);
   const [topic, setTopic] = useState<SkillId>('postflop');
-  const [hours, setHours] = useState(20);
-  const energyAfter = Math.min(100, Math.max(0, game.energy - C.STUDY_ENERGY_PER_HOUR * hours + C.WEEKLY_ENERGY_RECOVERY));
+  const maxHours = maxHoursThisWeek(game, 'study');
+  const [hours, setHours] = useState(Math.min(20, maxHours));
+  const energyAfter = Math.min(100, Math.max(0, game.energy - C.STUDY_ENERGY_PER_HOUR * hours + weeklyRecovery(game)));
 
   return (
     <Modal title="Estudiar" onClose={() => openModal(null)}>
@@ -42,19 +45,21 @@ export default function StudyModal() {
         <input
           type="range"
           min={C.MIN_STUDY_HOURS}
-          max={C.MAX_STUDY_HOURS}
+          max={maxHours}
           value={hours}
           onChange={(e) => setHours(+e.target.value)}
         />
       </label>
       <div className="preview">
         <div>
-          {SKILL_LABELS[topic]} <strong className="pos">+{d1(studyGain(game.skills[topic], hours))}</strong>
+          {SKILL_LABELS[topic]} <strong className="pos">+{d1(studyGainFor(game, topic, hours))}</strong>
         </div>
         <div>
           Energía al final de la semana <strong>{Math.round(energyAfter)}</strong>
         </div>
       </div>
+      {isExhausted(game) && <p className="warning">😵 Estás agotado: esta semana solo puedes estudiar {C.EXHAUSTED_MAX_HOURS} h.</p>}
+      {game.moral < C.MORAL_LOW_STUDY && <p className="warning">😞 Con la moral tan baja aprendes menos.</p>}
       <div className="modal-actions">
         <button className="btn" onClick={() => openModal(null)}>
           Cancelar

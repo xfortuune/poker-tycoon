@@ -1,9 +1,9 @@
 import { calendar } from '../game/state';
 import { useStore, type Speed } from '../store';
 import { eur, num } from './format';
-import { liveBankroll } from './live';
+import { liveBankroll, liveTilt } from './live';
 
-function Meter({ label, value, kind }: { label: string; value: number; kind: 'energy' | 'tilt' }) {
+function Meter({ label, value, kind }: { label: string; value: number; kind: 'energy' | 'tilt' | 'moral' }) {
   const v = Math.round(value);
   return (
     <div className="stat meter" title={`${label}: ${v}/100`}>
@@ -29,6 +29,7 @@ export default function TopBar() {
 
   const cal = calendar(game.week);
   const bankroll = running ? liveBankroll(running.result, running.progress) : game.bankroll;
+  const tilt = running ? liveTilt(running.result, running.progress) : game.tilt;
   const delta = running ? bankroll - running.result.before.bankroll : 0;
 
   return (
@@ -49,7 +50,8 @@ export default function TopBar() {
         </span>
       </div>
       <Meter label="Energía" value={game.energy} kind="energy" />
-      <Meter label="Tilt" value={game.tilt} kind="tilt" />
+      <Meter label="Tilt" value={tilt} kind="tilt" />
+      <Meter label="Moral" value={game.moral} kind="moral" />
       <div className="stat">
         <span className="stat-label">Seguidores</span>
         <span className="stat-value">{num(game.followers)}</span>

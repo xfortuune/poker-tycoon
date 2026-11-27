@@ -17,7 +17,8 @@ npm run build    # build de producción en dist/
 - `src/game/`: lógica pura del juego, sin React.
   - `config.ts`: **todos los números de balance** (rake, dificultad, winrates, energía, VIP…).
   - `simulation.ts`: winrate esperado, varianza por tramos, showdown/non-showdown, rakeback.
-  - `week.ts`: aplica la acción de la semana (jugar, estudiar, descansar) y devuelve el nuevo estado.
+  - `week.ts`: aplica la acción de la semana (jugar, estudiar, descansar), la moral, los gastos del mes y la bancarrota.
+  - `setup.ts`: mejoras del setup (silla, monitores, ordenador, software), viviendas y gastos fijos.
   - `save.ts`: guardado en 3 ranuras y exportación/importación JSON.
   - `__tests__/`: tests de Vitest.
 - `src/ui/`: componentes React y pixel art (Canvas).
@@ -27,13 +28,16 @@ npm run build    # build de producción en dist/
 
 ```
 S      = 0,30·Preflop + 0,40·Postflop + 0,30·Lectura
-S_ef   = S − 3·(mesas − 2)⁺ − 0,25·(50 − energía)⁺
+S_ef   = S + HUD − 3·(mesas − mesas cómodas)⁺ − 0,25·(50 − energía)⁺
 E      = S_ef − dificultad del límite
 bruto  = 30 · tanh(E / 25)                (bb/100)
 neto   = bruto − rake del límite − 0,15·tilt
 ```
 
 Cada tramo de 200 manos sigue una normal con media `neto·n/100` y desviación `90·√(n/100)` bb.
+El winrate se recalcula en cada tramo con el tilt y la energía de ese momento: los bad beats, coolers
+(tramos con z ≤ −2), los nuevos mínimos de la sesión y los downswings de 10/20/30 buy-ins suben el tilt,
+y eso hace que juegues peor el resto de la sesión. El Mental reduce el tilt que recibes.
 
 ## Publicación
 

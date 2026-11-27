@@ -2,10 +2,19 @@ import { CHUNK_HANDS } from '../game/config';
 import { calendar } from '../game/state';
 import { SKILL_IDS, SKILL_LABELS } from '../game/skills';
 import { bb100 } from '../game/stats';
+import type { SessionEventKind } from '../game/types';
 import { useStore } from '../store';
 import { d1, eur, num, pct, signed1, signedEur, tone } from './format';
 import LineChart from './LineChart';
 import Modal from './Modal';
+
+const EVENT_ICON: Record<SessionEventKind, string> = {
+  badbeat: '💥',
+  cooler: '🧊',
+  herocall: '🦸',
+  downswing: '📉',
+  exhausted: '😴',
+};
 
 export default function SummaryModal() {
   const r = useStore((s) => s.summary)!;
@@ -64,8 +73,27 @@ export default function SummaryModal() {
           />
           <p className="muted small">
             {p.limit} · {p.tables} mesa{p.tables > 1 ? 's' : ''} · showdown {signed1(p.sdBB)} bb · non-showdown{' '}
-            {signed1(p.nsdBB)} bb
+            {signed1(p.nsdBB)} bb · winrate esperado al empezar {signed1(p.expectedWR)} bb/100
+            {p.avgWR < p.expectedWR - 1 && <span className="neg"> (el tilt y el cansancio lo bajaron a {signed1(p.avgWR)})</span>}
           </p>
+          {p.events.length > 0 && (
+            <>
+              <h3>Momentos de la sesión</h3>
+              <ul className="events">
+                {p.events.map((e, i) => (
+                  <li key={i} className={e.kind === 'herocall' ? 'pos' : 'neg'}>
+                    <span className="ev-ico">{EVENT_ICON[e.kind]}</span> {e.text}
+                    {Math.abs(e.tiltDelta) >= 0.5 && (
+                      <span className="muted small">
+                        {' '}
+                        (tilt {signed1(e.tiltDelta)})
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
       )}
 
@@ -84,6 +112,18 @@ export default function SummaryModal() {
         <li>
           Tilt: {Math.round(r.before.tilt)} → <strong>{Math.round(r.after.tilt)}</strong>
         </li>
+        <li>
+          Moral: {Math.round(r.before.moral)} → <strong>{Math.round(r.after.moral)}</strong>
+        </li>
+        {r.expenses && r.expenses.total > 0 && (
+          <li>
+            Gastos del mes: <strong className="neg">−{eur(r.expenses.total)}</strong>{' '}
+            <span className="muted small">
+              (alquiler {eur(r.expenses.rent)}, comida {eur(r.expenses.food)}, facturas {eur(r.expenses.bills)}, suscripciones{' '}
+              {eur(r.expenses.subscriptions)})
+            </span>
+          </li>
+        )}
         {skillChanges.map((id) => (
           <li key={id}>
             {SKILL_LABELS[id]}: {d1(r.before.skills[id])} → <strong>{d1(r.after.skills[id])}</strong>{' '}

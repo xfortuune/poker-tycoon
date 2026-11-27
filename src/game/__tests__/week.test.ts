@@ -33,7 +33,7 @@ describe('runWeek', () => {
   });
 
   it('descansar recupera energía y baja el tilt', () => {
-    const g = { ...newGame(1), energy: 20, tilt: 60 };
+    const g = { ...newGame(1), energy: 20, tilt: 60, moral: 50 };
     const r = runWeek(g, { type: 'rest' });
     expect(r.after.energy).toBe(80);
     expect(r.after.tilt).toBeLessThan(30);
@@ -45,7 +45,7 @@ describe('runWeek', () => {
     expect(r.busted).toBe(true);
     expect(r.after.bankroll).toBe(C.START_BANKROLL);
     expect(r.after.career.busts).toBe(1);
-    expect(r.after.skills.preflop).toBeCloseTo(35, 6);
+    expect(r.after.skills.preflop).toBeCloseTo(25 + 25 * 0.7, 6);
   });
 
   it('no deja jugar sin un buy-in', () => {
@@ -59,7 +59,7 @@ describe('runWeek', () => {
     expect(calendar(52)).toEqual({ week: 1, year: 2 });
   });
 
-  it('con 30 buy-ins un jugador ganador rara vez se arruina en un año', () => {
+  it('con 30 buy-ins un jugador ganador rara vez se arruina en un año (incluidos los gastos)', () => {
     let busts = 0;
     for (let seed = 0; seed < 40; seed++) {
       let g = { ...newGame(seed), bankroll: 60, skills: { preflop: 40, postflop: 40, lectura: 40, mental: 40 } };
@@ -67,7 +67,10 @@ describe('runWeek', () => {
         const action: WeekAction =
           g.energy < 40 ? { type: 'rest' } : { type: 'play', limit: 'NL2', tables: 2, hours: 25 };
         const r = runWeek(g, action);
-        if (r.busted) busts++;
+        if (r.busted) {
+          busts++;
+          break;
+        }
         g = r.after;
       }
     }

@@ -18,7 +18,7 @@ export interface LimitConfig {
 }
 
 export const LIMITS: LimitConfig[] = [
-  { id: 'NL2', bb: 0.02, difficulty: 15, rake: 12 },
+  { id: 'NL2', bb: 0.02, difficulty: 12, rake: 12 },
   { id: 'NL5', bb: 0.05, difficulty: 22, rake: 11 },
   { id: 'NL10', bb: 0.1, difficulty: 30, rake: 9 },
   { id: 'NL25', bb: 0.25, difficulty: 38, rake: 8 },
@@ -104,16 +104,157 @@ export const REST_TILT = 30;
 /** Bajada natural del tilt por semana = base + Mental / divisor */
 export const TILT_DECAY_BASE = 8;
 export const TILT_DECAY_MENTAL_DIVISOR = 5;
-/** Tilt que suma cada buy-in perdido en una sesión (antes del Mental) */
-export const TILT_PER_BUYIN_LOST = 4;
-/** Tilt que resta cada buy-in ganado */
-export const TILT_RELIEF_PER_BUYIN_WON = 1;
+/**
+ * Tilt dentro de la sesión: sube cada vez que marcas un nuevo mínimo de la sesión
+ * (por cada buy-in que te hundes por debajo del peor punto) y baja al marcar nuevos máximos.
+ */
+export const TILT_PER_BUYIN_NEW_LOW = 3;
+export const TILT_RELIEF_PER_BUYIN_NEW_HIGH = 1;
+/** Factor del Mental sobre el tilt que recibes: 1 − Mental/200 (Mental 100 = la mitad) */
+export const TILT_MENTAL_DIVISOR = 200;
+/** Con poca energía te calientas antes */
+export const TILT_FATIGUE_THRESHOLD = 30;
+export const TILT_FATIGUE_MULT = 1.3;
+
+// ── Eventos de tilt (por tramo de CHUNK_HANDS manos) ────────
+/** Un tramo con z ≤ este valor es un bad beat o un cooler */
+export const BAD_BEAT_Z = -2;
+export const BAD_BEAT_TILT = 8;
+/** Un tramo con z ≥ este valor es un hero call / mano épica */
+export const HERO_CALL_Z = 2.2;
+export const HERO_CALL_TILT_RELIEF = 5;
+/** Downswings de la carrera (en buy-ins desde el máximo) que disparan un evento */
+export const DOWNSWING_EVENTS = [
+  { buyins: 10, tilt: 12 },
+  { buyins: 20, tilt: 15 },
+  { buyins: 30, tilt: 18 },
+] as const;
+/** Si la energía llega a 0 en mitad de la sesión, la cortas */
+export const EXHAUSTION_ENERGY = 0;
+/** Con menos energía que esto al empezar la semana solo puedes jugar o estudiar unas pocas horas */
+export const EXHAUSTED_THRESHOLD = 15;
+export const EXHAUSTED_MAX_HOURS = 10;
+/** Horas de juego a partir de las que cada hora cansa más */
+export const LONG_WEEK_HOURS = 40;
+export const LONG_WEEK_ENERGY_MULT = 1.5;
+
+// ── Moral ───────────────────────────────────────────────────
+/** Cada semana la moral se acerca este % a la moral base de tu vivienda */
+export const MORAL_DRIFT = 0.25;
+/** Moral por buy-in ganado/perdido en la semana (con tope) */
+export const MORAL_PER_BUYIN = 1.5;
+export const MORAL_WEEK_MAX_GAIN = 6;
+export const MORAL_WEEK_MAX_LOSS = 8;
+export const MORAL_REST_BONUS = 4;
+export const MORAL_MOVE_BONUS = 15;
+export const MORAL_AFTER_BUST = 20;
+/** Energía extra por semana = (moral − 50) / divisor */
+export const MORAL_ENERGY_DIVISOR = 5;
+/** Bajada de tilt extra por semana = (moral − 50) / divisor */
+export const MORAL_TILT_DIVISOR = 10;
+/** Con la moral por debajo de esto estudias peor */
+export const MORAL_LOW_STUDY = 30;
+export const MORAL_LOW_STUDY_MULT = 0.8;
+
+// ── Mejoras del setup ───────────────────────────────────────
+export type UpgradeCategory = 'silla' | 'monitores' | 'pc' | 'software';
+
+export interface UpgradeEffects {
+  /** Mesas sin penalización */
+  comfortTables?: number;
+  /** Mesas máximas que puedes abrir */
+  maxTables?: number;
+  /** Multiplicador del gasto de energía al jugar */
+  energyCostMult?: number;
+  /** Energía extra recuperada cada semana */
+  energyRecovery?: number;
+  /** Multiplicador de manos por hora */
+  handsMult?: number;
+  /** Puntos de habilidad efectiva en mesa (HUD) */
+  skillBonus?: number;
+  /** Multiplicador de lo que aprendes estudiando */
+  studyMult?: number;
+}
+
+export interface UpgradeItem {
+  name: string;
+  price: number;
+  /** Suscripción mensual (€) */
+  monthly: number;
+  desc: string;
+  effects: UpgradeEffects;
+}
+
+export const UPGRADE_CATEGORIES: { id: UpgradeCategory; name: string }[] = [
+  { id: 'silla', name: 'Silla' },
+  { id: 'monitores', name: 'Monitores' },
+  { id: 'pc', name: 'Ordenador' },
+  { id: 'software', name: 'Software' },
+];
+
+export const UPGRADES: Record<UpgradeCategory, UpgradeItem[]> = {
+  silla: [
+    { name: 'Silla plegable', price: 0, monthly: 0, desc: 'Cruje cada vez que haces un fold.', effects: { energyCostMult: 1.1 } },
+    { name: 'Silla de oficina', price: 120, monthly: 0, desc: 'Ruedas y respaldo. Un lujo.', effects: { energyCostMult: 1, energyRecovery: 3 } },
+    { name: 'Silla gaming', price: 400, monthly: 0, desc: 'Con cojín lumbar y rayas rojas.', effects: { energyCostMult: 0.92, energyRecovery: 5 } },
+    { name: 'Silla ergonómica pro', price: 1200, monthly: 0, desc: 'Tu espalda te lo agradecerá.', effects: { energyCostMult: 0.82, energyRecovery: 8 } },
+  ],
+  monitores: [
+    { name: 'Pantalla del portátil', price: 0, monthly: 0, desc: '15 pulgadas para todo.', effects: { comfortTables: 2 } },
+    { name: 'Monitor de 24"', price: 150, monthly: 0, desc: 'Ya caben 4 mesas sin solaparse.', effects: { comfortTables: 4 } },
+    { name: 'Dos monitores', price: 450, monthly: 0, desc: 'Setup de regular: 6 mesas cómodas.', effects: { comfortTables: 6 } },
+    { name: 'Tres monitores 4K', price: 1500, monthly: 0, desc: 'Ves 8 mesas sin despeinarte.', effects: { comfortTables: 8 } },
+  ],
+  pc: [
+    { name: 'Portátil viejo', price: 0, monthly: 0, desc: 'Se cuelga con más de 4 mesas.', effects: { maxTables: 4, handsMult: 1 } },
+    { name: 'PC de sobremesa', price: 600, monthly: 0, desc: 'Hasta 6 mesas y menos esperas.', effects: { maxTables: 6, handsMult: 1.05 } },
+    { name: 'PC gaming', price: 1800, monthly: 0, desc: 'Hasta 8 mesas, todo fluido.', effects: { maxTables: 8, handsMult: 1.1 } },
+    { name: 'Workstation', price: 5000, monthly: 0, desc: 'Ni un segundo de lag.', effects: { maxTables: 8, handsMult: 1.15 } },
+  ],
+  software: [
+    { name: 'Sin software', price: 0, monthly: 0, desc: 'Juegas a pelo.', effects: {} },
+    { name: 'Tracker con HUD', price: 60, monthly: 0, desc: 'Estadísticas de los rivales en pantalla.', effects: { skillBonus: 2 } },
+    { name: 'Tracker + HUD avanzado', price: 200, monthly: 5, desc: 'Popups y notas automáticas.', effects: { skillBonus: 4 } },
+    { name: 'Tracker + solver', price: 450, monthly: 15, desc: 'Estudias con un solver GTO.', effects: { skillBonus: 5, studyMult: 1.3 } },
+  ],
+};
+
+// ── Viviendas y gastos fijos ────────────────────────────────
+export type HomeId = 'habitacion' | 'piso' | 'estudio' | 'atico';
+
+export interface HomeConfig {
+  id: HomeId;
+  name: string;
+  desc: string;
+  /** Alquiler mensual (€) */
+  rent: number;
+  /** Comida al mes (€) */
+  food: number;
+  /** Internet, móvil y suscripciones básicas al mes (€) */
+  bills: number;
+  /** Gastos de mudanza y fianza al entrar (€, no se recuperan) */
+  moveCost: number;
+  /** Moral base de la vivienda */
+  moral: number;
+  /** Energía extra por semana (descansas mejor) */
+  energyRecovery: number;
+}
+
+export const HOMES: HomeConfig[] = [
+  { id: 'habitacion', name: 'Tu habitación', desc: 'En casa de tus padres. Pones algo para la comida.', rent: 0, food: 8, bills: 0, moveCost: 0, moral: 45, energyRecovery: 0 },
+  { id: 'piso', name: 'Piso propio', desc: 'Un piso pequeño, pero tuyo.', rent: 550, food: 220, bills: 45, moveCost: 1100, moral: 65, energyRecovery: 4 },
+  { id: 'estudio', name: 'Casa con estudio', desc: 'Un despacho solo para el póker.', rent: 1600, food: 320, bills: 70, moveCost: 3200, moral: 78, energyRecovery: 7 },
+  { id: 'atico', name: 'Ático de lujo', desc: 'Vistas a la ciudad y jacuzzi.', rent: 4200, food: 600, bills: 120, moveCost: 8400, moral: 92, energyRecovery: 10 },
+];
+
+/** Meses de gastos que recomendamos tener aparte del bankroll de juego al mudarte */
+export const MOVE_RECOMMENDED_MONTHS = 6;
 
 // ── Bankroll ────────────────────────────────────────────────
 export const START_BANKROLL = 50;
 /** Buy-ins recomendados para jugar un límite */
 export const RECOMMENDED_BUYINS = 30;
-/** Fracción de habilidad que conservas al arruinarte */
+/** Fracción de lo aprendido (por encima del nivel inicial) que conservas al arruinarte */
 export const BUST_SKILL_RETENTION = 0.7;
 
 // ── Tiempo ──────────────────────────────────────────────────
@@ -125,4 +266,4 @@ export const WEEK_DURATION_MS = 4000;
 // ── Guardado ────────────────────────────────────────────────
 export const SAVE_SLOTS = 3;
 export const SAVE_KEY_PREFIX = 'poker-tycoon-slot-';
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
